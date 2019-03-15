@@ -14,6 +14,10 @@ endif()
 ##############################
 
 
+find_package(catkin REQUIRED cmake_modules)
+find_package(Eigen REQUIRED)
+
+
 find_package(catkin REQUIRED COMPONENTS
  roscpp
  message_generation
@@ -21,8 +25,10 @@ find_package(catkin REQUIRED COMPONENTS
  message_generation
  roscpp
  rospy
- genmsg 
-)
+ genmsg
+ moveit_ros_planning_interface
+ moveit_visual_tools
+ )
 
 find_package(Boost REQUIRED)
 include_directories(${BOOST_INCLUDE_DIRECTORIES})
@@ -54,12 +60,18 @@ generate_messages(
 ##############################
 
 catkin_package(
+  INCLUDE_DIRS
   CATKIN_DEPENDS message_runtime std_msgs
+
 )
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-)
+  ${Eigen_INCLUDE_DIRS}
+  )
+
+
+
 
   
 ##############################
@@ -70,3 +82,7 @@ include_directories(
 add_executable(falcon_node src/falcon_node.cpp)
 add_dependencies(falcon_node aqbar_generate_messages_cpp)
 target_link_libraries(falcon_node ${catkin_LIBRARIES} nifalcon usb-1.0)
+
+add_executable(simpanda_node src/simpanda_node.cpp)
+add_dependencies(simpanda_node aqbar_generate_messages_cpp)
+target_link_libraries(simpanda_node ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_INCLUDE_DIRS})
