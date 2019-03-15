@@ -36,7 +36,7 @@ sudo cp udev_rules/99-udev-novint.rules /etc/udev/rules.d*
 ```
 
 
-You will also need to manually install some dependencies. First if you want to use the falcon to teleoperate a simulated panda arm you will need to clone this package: https://github.com/ros-planning/panda_moveit_config/tree/kinetic-devel into your workspace, and checkout and katkin-devel branch
+If you want to use the simualted arm, you will also need to clone this package: https://github.com/ros-planning/panda_moveit_config into your workspace, and checkout and kinetic-devel branch
 
 ```shell
 cd aqbar_ws/src 
