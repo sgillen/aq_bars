@@ -1,0 +1,10 @@
+<launch>
+
+  <group>
+  <!-- best way I could find so that we actually pass this argument, still don't love it though -->
+  <include file="$(find panda_moveit_config)/launch/demo.launch" />
+  <node name="falcon_node" pkg="aqbar" type="falcon_node" />
+  <node name="panda_node" pkg="aqbar" type="simpanda_node.py" />
+
+  </group>
+</launch>

@@ -1,0 +1,10 @@
+<launch>
+
+  <group>
+  <!-- best way I could find so that we actually pass this argument, still don't love it though -->
+  
+  <node name="falcon_node" pkg="aqbar" type="falcon_node" />
+  <node name="arduino_node" pkg="aqbar" type="arduino_node.py" />
+
+  </group>
+</launch>
