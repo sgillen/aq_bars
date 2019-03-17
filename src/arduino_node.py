@@ -4,13 +4,17 @@
 
 import serial, time, sys, select
 import rospy
-from std_msgs.msg import Int64, Float64, String, Float64MultiArray
+from std_msgs.msg import Int64, Float64, String, Float64MultiArray, Byte
 from std_srvs.srv import Empty, EmptyResponse
 from aqbar.msg import falconForces, falconPos
 
 device = '/dev/ttyACM1' # TODO
 
 pose_cmds = [0,0,0]
+
+
+
+
 
 # When this gets flipped, send shutdown signal
 shutdown_flag = False
@@ -57,7 +61,7 @@ def pose_callback(msg):
 ##------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    #!!! this also restarts the arduino! (apparently)
+    #!!! this also restarts the arduino!
 
     print "trying to connect to arduino"
    # Keep trying to open serial
@@ -73,10 +77,15 @@ if __name__ == '__main__':
     print "found it!"
     time.sleep(3)
 
-
-    force_pub = rospy.Publisher('falconForce', falconForces, queue_size = 10)
     rospy.init_node('lynx_node', anonymous=False)
-    
+
+
+    # There are smarter ways to do this...
+    # Could do it bitwise, could have an array of bools
+    # None of that really matters though for this use case, and this
+    # will be easier to read and modify I think
+    sensor_pub = rospy.Publisher('contact_sensor', Byte, queue_size = 10)
+        
     pose_sub = rospy.Subscriber('falconPos', falconPos, pose_callback)
     
     rate = rospy.Rate(1000) #100Hz
@@ -92,7 +101,8 @@ if __name__ == '__main__':
         # get thruster cmd
         x = ser.readline().strip()
         print x
-        
+
+
         # if x != '':
         #     msg[x[0]] = x[1:]
 
@@ -101,8 +111,6 @@ if __name__ == '__main__':
         #     msg[x[0]] = x[1:]
         #status = ser.readline().strip()
 
-        
-        force_pub.publish(falconForces(1,1,1))
         #print pose_cmds
         
         rate.sleep()
