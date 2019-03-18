@@ -8,12 +8,9 @@ from std_msgs.msg import Int64, Float64, String, Float64MultiArray, Byte
 from std_srvs.srv import Empty, EmptyResponse
 from aqbar.msg import falconForces, falconPos
 
-device = '/dev/ttyACM1' # TODO
-
+#device = '/dev/ttyACM1' # TODO
+device = '/dev/ttyUSB0'
 pose_cmds = [0,0,0]
-
-
-
 
 
 # When this gets flipped, send shutdown signal
@@ -30,9 +27,9 @@ def read_cmd_stdin():
 
 
 #sends an array of ints to the thrusters using the agreed upon protocol
-#the actual over the wire value is t,x,y,z!
+#the actual over the wire value is m,x,y,z!
 def send_pose_cmds(pose_cmd):
-    cmd_str = "t"
+    cmd_str = "m"
     for cmd in pose_cmds:
         cmd_str += (",")
         cmd_str += (str(cmd))
@@ -92,15 +89,15 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
 
-        #send_pose_cmds(pose_cmds)
+        send_pose_cmds(pose_cmds)
 
         #ser.write('c!')
         #temp = ser.readline()
         #print(temp)
 
         # get thruster cmd
-        x = ser.readline().strip()
-        print x
+        #x = ser.readline().strip()
+        #print x
 
 
         # if x != '':
