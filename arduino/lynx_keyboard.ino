@@ -1,11 +1,3 @@
-//The lynx will accept commands from the computer (using for example the serial arduino monitor) with the form
-// m,x,y,z!
-// x y and z are the desired end effector positions. 
-
-// code taken from https://raw.githubusercontent.com/Lynxmotion/Arms/Botboarduino/BotBoarduino_AL5D_without_PS2_-_3_KeyboardControl/BotBoarduino_AL5D_without_PS2_-_3_KeyboardControl.ino
-// and merged with our own code for reading commands from a computer. 
-
-
 //#if ARDUINO >= 100
 #include "Arduino.h"
 //#else
@@ -15,35 +7,16 @@
 #include <Servo.h>
 #include <math.h>
 
-//comment to disable the Force Sensitive Resister on the gripper
-//#define FSRG
-
-//Select which arm by uncommenting the corresponding line
-//#define AL5A
-//#define AL5B
-#define AL5D
-
 //uncomment for digital servos in the Shoulder and Elbow
 //that use a range of 900ms to 2100ms
 //#define DIGITAL_RANGE
 
-#ifdef AL5A
-const float A = 3.75;
-const float B = 4.25;
-#elif defined AL5B
-const float A = 4.75;
-const float B = 5.00;
-#elif defined AL5D
-const float A = 5.75;
-const float B = 7.375;
-#endif
-
 //Arm Servo pins
 #define Base_pin 2
-#define Shoulder_pin 3
-#define Elbow_pin 4
-#define Wrist_pin 10
-#define Gripper_pin 11
+#define Shoulder_pin 4
+#define Elbow_pin 6
+#define Wrist_pin 8
+#define Gripper_pin 10
 #define WristR_pin 12
 
 //Onboard Speaker
@@ -51,8 +24,18 @@ const float B = 7.375;
 
 #define BUFFER_SIZE 32 //may need to change
 
+#define X_MAX 11
+#define X_MIN 5.5
+#define Y_MAX 6
+#define Y_MIN -2.5
+#define Z_MAX 90
+#define Z_MIN 0
+
 char buffer[BUFFER_SIZE]; //this is the buffer where we store incoming text from the computer
 uint16_t serialBufferPos;
+
+const float A = 5.75;
+const float B = 7.375;
 
 //Radians to Degrees constant
 const float rtod = 57.295779;
@@ -78,9 +61,9 @@ float WA = 0;
 int WR = 90;
 
 //Arm temp pos
-float x = 0;
-float y = 0;
-float z = 0;
+float x = 5.5;   //5.5 - 11
+float y = 4.0;   // -2.5 - 6
+float z = 45;   // 0 - 90
 int g = 90;
 int wr = 90;
 float wa = 0;
@@ -153,28 +136,6 @@ void setup()
   Arm(x, y, z, g, wa, wr);
 }
 
-const float posDeltaX = 0.25;
-const float posDeltaY = 0.25;
-const float posDeltaZ = 2.5;
-const float posDeltaWa = 2.5;
-const int posDeltaG = 5;
-const int posDeltaWr = 5;
-long lastReferenceTime;
-unsigned char action;
-
-#define actionUp 119                // w
-#define actionDown 115              // s
-#define actionLeft 97               // a
-#define actionRight 100             // d
-#define actionRotCW 101             // e
-#define actionRotCCW 113            // q
-#define actionGripperOpen 114       // r
-#define actionGripperClose 116      // t
-#define actionWristUp 122           // z
-#define actionWristDown 120         // x
-#define actionWristRotCW 103        // g
-#define actionWristRotCCW 102       // f
-
 void loop(){
     if(Serial.available() > 0){
   
@@ -189,21 +150,33 @@ void loop(){
 
             char* prot = strtok(buffer, ","); //prot tells us what cmd was sent
             if ( !prot[0] ) { //check if something about the packet is malformed enough that strok fails
-              Serial.println("B1");
+                Serial.println("B1");
             }
             
             // Handle specific commands
             else if ( prot[0] == 'm' ) {
-                x = atof(strtok(NULL, ","));
-                y = atof(strtok(NULL, ","));
-                z = atof(strtok(NULL, "!"));
-
-                // Display position
-                Serial.print("x = "); Serial.print(x, DEC); Serial.print("\t y = "); Serial.print(y, DEC); Serial.print("\t z = "); Serial.print(z, DEC); Serial.print("\t g = "); Serial.print(g, DEC); Serial.print("\t wa = "); Serial.print(wa, DEC); Serial.print("\t wr = "); Serial.println(wr, DEC);
+  
+               // converts our values from a string x,y,z! to a float
+               x = atof(strtok(NULL, ","));
+               y = atof(strtok(NULL, ","));
+               z = atof(strtok(NULL, "!"));
+              
+               // truncate our values if needed
+               x =  x < X_MIN ? X_MIN : x; 
+               x =  x > X_MAX ? X_MAX : x;
+              
+               y =  y < Y_MIN ? Y_MIN : y;
+               y =  y > Y_MAX ? Y_MAX : y;
+              
+               z =  z < Z_MIN ? Z_MIN : z;
+               z =  z > Z_MAX ? Z_MAX : z;
+               
+               // Display position
+               Serial.print("x = "); Serial.print(x, DEC); Serial.print("\t y = "); Serial.print(y, DEC); Serial.print("\t z = "); Serial.print(z, DEC); Serial.print("\t g = "); Serial.print(g, DEC); Serial.print("\t wa = "); Serial.print(wa, DEC); Serial.print("\t wr = "); Serial.println(wr, DEC);
 
                   
-                // Move arm
-                Arm(x, y, z, g, wa, wr);
+               // Move arm
+               Arm(x, y, z, g, wa, wr);
             
             }else if (prot[0] == 's'){
                   //TODO shutoff commands
@@ -225,9 +198,6 @@ void loop(){
       serialBufferPos++;
     }
     
-      
-      // Pause for 100 ms between actions
-      lastReferenceTime = millis();
-      while(millis() <= (lastReferenceTime + 100)){};
-    }
   }
+}
+
