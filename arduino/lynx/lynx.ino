@@ -11,6 +11,20 @@
 //that use a range of 900ms to 2100ms
 //#define DIGITAL_RANGE
 
+
+// comment or uncomment to turn on/off debug output
+// #define DEBUG 
+
+#ifdef DEBUG
+  #define DEBUG_PRINT(x) Serial.print(x)
+  #define DEBUG_PRINTLN(x) Serial.println(x)
+#else 
+  #define DEBUG_PRINT(x) 
+  #define DEBUG_PRINTLN(x)
+#endif
+
+
+
 //Arm Servo pins
 #define Base_pin 2
 #define Shoulder_pin 4
@@ -76,13 +90,13 @@ int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inv
 {
   float M = sqrt((y*y)+(x*x));
 
-  Serial.print("M = "); Serial.println(M, DEC);
+  DEBUG_PRINT("M = "); DEBUG_PRINTLN(M);
   
   if(M <= 0)
     return 1;
   float A1 = atan(y/x);
   
-  Serial.print("A1 = "); Serial.println(A1, DEC);
+  DEBUG_PRINT("A1 = "); DEBUG_PRINTLN(A1);
 
   if(x <= 0)
     return 1;
@@ -93,7 +107,7 @@ int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inv
   Elbow = Elbow * rtod;
   Shoulder = Shoulder * rtod;
 
-  Serial.print("elb = "); Serial.print(Elbow, DEC); Serial.print("\t shoul = "); Serial.print(Shoulder, DEC); Serial.print("\t z = "); Serial.print(z, DEC);
+  DEBUG_PRINT("elb = "); DEBUG_PRINT(Elbow); DEBUG_PRINT("\t shoul = "); DEBUG_PRINT(Shoulder); DEBUG_PRINT("\t z = "); DEBUG_PRINTLN(z);
 
   
   if((int)Elbow <= 0 || (int)Shoulder <= 0)
@@ -142,15 +156,15 @@ void loop(){
          // Read next byte from serial into buffer
         buffer[serialBufferPos] = Serial.read();
     
-        // Serial.print("buffer is: ");
-        // Serial.println(buffer);
+        // DEBUG_PRINT("buffer is: ");
+        // DEBUG_PRINTln(buffer);
 
         // Check if we've reached exclamation
         if (buffer[serialBufferPos] == '!') {
 
             char* prot = strtok(buffer, ","); //prot tells us what cmd was sent
             if ( !prot[0] ) { //check if something about the packet is malformed enough that strok fails
-                Serial.println("B1");
+                DEBUG_PRINTLN("B1");
             }
             
             // Handle specific commands
@@ -172,7 +186,7 @@ void loop(){
                z =  z > Z_MAX ? Z_MAX : z;
                
                // Display position
-               Serial.print("x = "); Serial.print(x, DEC); Serial.print("\t y = "); Serial.print(y, DEC); Serial.print("\t z = "); Serial.print(z, DEC); Serial.print("\t g = "); Serial.print(g, DEC); Serial.print("\t wa = "); Serial.print(wa, DEC); Serial.print("\t wr = "); Serial.println(wr, DEC);
+               DEBUG_PRINT("x = "); DEBUG_PRINT(x); DEBUG_PRINT("\t y = "); DEBUG_PRINT(y); DEBUG_PRINT("\t z = "); DEBUG_PRINT(z); DEBUG_PRINT("\t g = "); DEBUG_PRINT(g); DEBUG_PRINT("\t wa = "); DEBUG_PRINT(wa); DEBUG_PRINT("\t wr = "); DEBUG_PRINTLN(wr);
 
                   
                // Move arm
@@ -182,8 +196,8 @@ void loop(){
                   //TODO shutoff commands
                   
             }else { // Bad command
-                Serial.println("B2");
-                Serial.println(prot[0]);
+                DEBUG_PRINTLN("B2");
+                DEBUG_PRINTLN(prot[0]);
             }
     
         // Reset buffer position
@@ -193,11 +207,10 @@ void loop(){
        }
 
     else {
-      Serial.print("Buffer pos ");
-      Serial.println(serialBufferPos);
+      DEBUG_PRINT("Buffer pos ");
+      DEBUG_PRINTLN(serialBufferPos);
       serialBufferPos++;
     }
     
   }
 }
-
