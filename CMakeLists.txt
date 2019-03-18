@@ -15,8 +15,8 @@ endif()
 
 
 find_package(catkin REQUIRED cmake_modules)
-find_package(Eigen REQUIRED)
 
+find_package(Eigen REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
  roscpp
@@ -28,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
  genmsg
  moveit_ros_planning_interface
  moveit_visual_tools
+ serial
  )
 
 find_package(Boost REQUIRED)
@@ -70,9 +71,6 @@ include_directories(
   ${Eigen_INCLUDE_DIRS}
   )
 
-
-
-
   
 ##############################
 # Build Executables ##########
@@ -82,6 +80,10 @@ include_directories(
 add_executable(falcon_node src/falcon_node.cpp)
 add_dependencies(falcon_node aqbar_generate_messages_cpp)
 target_link_libraries(falcon_node ${catkin_LIBRARIES} nifalcon usb-1.0)
+
+add_executable(falcon_arduino src/falcon_arduino.cpp)
+add_dependencies(falcon_arduino aqbar_generate_messages_cpp)
+target_link_libraries(falcon_arduino ${catkin_LIBRARIES} nifalcon usb-1.0)
 
 add_executable(simpanda_node src/simpanda_node.cpp)
 add_dependencies(simpanda_node aqbar_generate_messages_cpp)

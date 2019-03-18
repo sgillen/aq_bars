@@ -32,8 +32,6 @@ using namespace std;
 using namespace StamperKinematicImpl;
 
 
-
-
 #define COUNT_MAX 5;// how many IO cycles to we count a sensed wall as valid
 
 #define WALL_K 500; // how stiff our virtual walls appear
@@ -223,15 +221,16 @@ void ContactensorCallback(const std_msgs::Byte& msg)
 }
 
 
-
 int main(int argc, char* argv[])
 {
-    ros::init(argc,argv, "ROSfalcon");
-    
-    //TODO Driver currently assumes there is only one falcon attached 
-    if(init_falcon(0))
+
+
+  ros::init(argc,argv, "ROSfalcon");
+  
+  //TODO Driver currently assumes there is only one falcon attached 
+  if(init_falcon(0))
 		{ 
-			cout << "Falcon Initialised Starting ROS Node" << endl;
+			cout << "Falcon Initialized Starting ROS Node" << endl;
 
 
 			g_falconDevice.setFalconKinematic<libnifalcon::FalconKinematicStamper>();
