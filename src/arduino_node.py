@@ -8,6 +8,12 @@ from std_msgs.msg import Int64, Float64, String, Float64MultiArray, Byte
 from std_srvs.srv import Empty, EmptyResponse
 from aqbar.msg import falconForces, falconPos
 
+
+ 
+X_MAX = 11; X_MIN = 5.5
+Y_MAX = 6 ; Y_MIN = -2.5
+Z_MAX = 90; Z_MIN = 0
+
 #device = '/dev/ttyACM1' # TODO
 device = '/dev/ttyUSB0'
 pose_cmds = [0,0,0]
@@ -48,12 +54,23 @@ def shutdown_thrusters(srv):
     return EmptyResponse()
 
 def pose_callback(msg):
-#    rospy.loginfo(rospy.get_caller_id() + "I heard %s", msg.X)
-#    print "I heard %s" %msg.X
+    #    rospy.loginfo(rospy.get_caller_id() + "I heard %s", msg.X)
+    #    print "I heard %s" %msg.X
     global pose_cmds
-    pose_cmds[0] = msg.X
-    pose_cmds[1] = msg.Y
-    pose_cmds[2] = msg.Z
+
+    # map falcon workspace to lynx workspace
+    pose_cmds[0] = str((msg.X/.2 * (X_MAX - X_MIN)) + X_MIN)
+    pose_cmds[1] = str((msg.Y/.2 * (Y_MAX - Y_MIN)) + Y_MIN)
+    pose_cmds[2] = str((msg.Z/.2 * (Z_MAX - Z_MIN)) + Z_MIN)
+
+
+    pose_cmds[0] = pose_cmds[0][:4]
+    pose_cmds[1] = pose_cmds[0][:4]
+    pose_cmds[1] = pose_cmds[0][:4]
+
+    # truncate the strings that we send
+
+    print "pose_cmds: " , pose_cmds[0], pose_cmds[1], pose_cmds[2]
 
 ##------------------------------------------------------------------------------
 if __name__ == '__main__':
@@ -64,7 +81,7 @@ if __name__ == '__main__':
    # Keep trying to open serial
     while True:
         try:
-            ser = serial.Serial(device,115200, timeout=0,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+            ser = serial.Serial(device,9600, timeout=0,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
             break
         except:
             time.sleep(0.25)
@@ -85,15 +102,16 @@ if __name__ == '__main__':
         
     pose_sub = rospy.Subscriber('falconPos', falconPos, pose_callback)
     
-    rate = rospy.Rate(1000) #100Hz
+    rate = rospy.Rate(5) #Hz
 
     while not rospy.is_shutdown():
 
         send_pose_cmds(pose_cmds)
+        #print "writing pose"
 
         #ser.write('c!')
-        #temp = ser.readline()
-        #print(temp)
+        temp = ser.readline()
+        print(temp)
 
         # get thruster cmd
         #x = ser.readline().strip()
