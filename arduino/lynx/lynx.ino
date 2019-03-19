@@ -169,8 +169,6 @@ void loop(){
             // Handle specific commands
             else if ( prot[0] == 'm' ) {
 
-            
-
                onState[0] = (*dpin1_port & dpin1_mask) != 0;  
                onState[1] = (*dpin2_port & dpin2_mask) != 0;  
                onState[2] = (*dpin3_port & dpin3_mask) != 0;  
