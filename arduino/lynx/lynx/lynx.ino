@@ -39,10 +39,10 @@
 
 #define BUFFER_SIZE 32 //may need to change
 
-#define X_MAX 14
-#define X_MIN 4.0
+#define X_MAX 11
+#define X_MIN 5.5
 #define Y_MAX 8
-#define Y_MIN -6.5
+#define Y_MIN -3.5
 #define Z_MAX 90
 #define Z_MIN 0
 
@@ -68,9 +68,9 @@ Servo Gripper;
 Servo WristR;
 
 //Arm temp pos
-float elb = 90;
-float should = 90;
-float z = 45; 
+float x = 5.5;   //5.5 - 11
+float y = 4.0;   // -2.5 - 6
+float z = 45;   // 0 - 90
 int g = 90;
 int wr = 90;
 float wa = 0;
@@ -102,15 +102,47 @@ int freeRam () {
 }
 
 // The arduino does NOT have a floating point unit, we may need to do these calculations on the laptop and send over joint position
-int Arm(float Elbow, float Shoulder, float z) //Here's all the Inverse Kinematics to control the arm
+int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inverse Kinematics to control the arm
 {
+  float M = sqrt((y*y)+(x*x));
+
+  //DEBUG_PRINT("M = "); DEBUG_PRINTLN(M);
+  
+  if(M <= 0)
+    return 1;
+  float A1 = atan(y/x);
+  
+  //DEBUG_PRINT("A1 = "); DEBUG_PRINTLN(A1);
+
+  if(x <= 0)
+    return 1;
+    
+  float A2 = acos((A*A-B*B+M*M)/((A*2)*M));
+  float Elbow = acos((A*A+B*B-M*M)/((A*2)*B));
+  float Shoulder = A1 + A2;
+  Elbow = Elbow * rtod;
+  Shoulder = Shoulder * rtod;
+
+  DEBUG_PRINT("elb = "); DEBUG_PRINT(Elbow); DEBUG_PRINT("\t shoul = "); DEBUG_PRINT(Shoulder); DEBUG_PRINT("\t z = "); DEBUG_PRINTLN(z);
+
   
   if((int)Elbow <= 0 || (int)Shoulder <= 0)
     return 1;
-    
+  float Wris = abs(wa - Elbow - Shoulder) - 90;
+#ifdef DIGITAL_RANGE
   Elb.writeMicroseconds(map(180 - Elbow, 0, 180, 900, 2100  ));
   Shldr.writeMicroseconds(map(Shoulder, 0, 180, 900, 2100));
+#else
+  Elb.write(180 - Elbow);
+  Shldr.write(Shoulder);
+#endif
+  //Wrist.write(180 - Wris);
   Base.write(z);
+  //WristR.write(wr);
+#ifndef FSRG
+  //Gripper.write(g);
+#endif
+
 
   return 0; 
 }
@@ -146,7 +178,7 @@ void setup()
   
 
   Serial.println("Arduino connected, writing to arm");
-  Arm(elb, should, z);
+  Arm(x, y, z, g, wa, wr);
 }
 
 void loop(){
@@ -182,19 +214,19 @@ void loop(){
               
           
                // converts our values from a string x,y,z! to a float
-               elb = atof(strtok(NULL, ","));
-               should= atof(strtok(NULL, ","));
+               x = atof(strtok(NULL, ","));
+               y = atof(strtok(NULL, ","));
                z = atof(strtok(NULL, "!"));
               
                // truncate our values if needed
-               //x =  x < X_MIN ? X_MIN : x; 
-               //x =  x > X_MAX ? X_MAX : x;
+               x =  x < X_MIN ? X_MIN : x; 
+               x =  x > X_MAX ? X_MAX : x;
               
-               //y =  y < Y_MIN ? Y_MIN : y;
-               //y =  y > Y_MAX ? Y_MAX : y;
+               y =  y < Y_MIN ? Y_MIN : y;
+               y =  y > Y_MAX ? Y_MAX : y;
               
-               //z =  z < Z_MIN ? Z_MIN : z;
-               //z =  z > Z_MAX ? Z_MAX : z;
+               z =  z < Z_MIN ? Z_MIN : z;
+               z =  z > Z_MAX ? Z_MAX : z;
 
                //int buttonState1 = digitalRead(DPIN1);
                //int buttonState2 = digitalRead(DPIN2);
@@ -206,7 +238,11 @@ void loop(){
                DEBUG_PRINT("x = "); DEBUG_PRINT(x); DEBUG_PRINT("\t y = "); DEBUG_PRINT(y); DEBUG_PRINT("\t z = "); DEBUG_PRINT(z); DEBUG_PRINT("\t g = "); DEBUG_PRINT(g); DEBUG_PRINT("\t wa = "); DEBUG_PRINT(wa); DEBUG_PRINT("\t wr = "); DEBUG_PRINTLN(wr);
                  
                // Move arm
-               Arm(elb, should, z);
+               Arm(x, y, z, g, wa, wr);
+
+               for(int i = 0; i < 4; i++){
+                  onState[i] = 0;
+               }
             
             }else if (prot[0] == 's'){
                   //TODO shutoff commands
