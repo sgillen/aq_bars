@@ -28,17 +28,30 @@
 #include <std_msgs/Byte.h>
 #include "serial/serial.h"
 
+#include <unistd.h>
+
 
 using namespace libnifalcon;
 using namespace std;
 using namespace StamperKinematicImpl;
 
+#define X_MAX 11
+#define X_MIN 5.5
+#define Y_MAX 6
+#define Y_MIN -2.5
+#define Z_MAX 90
+#define Z_MIN  0
 
+#define FX_MAX .05
+#define FX_MIN -.05
+#define FY_MAX .055
+#define FY_MIN -.055
+#define FZ_MAX .17
+#define FZ_MIN .07
 
+#define COUNT_MAX 100;// how many IO cycles to we count a sensed wall as valid
 
-#define COUNT_MAX 5;// how many IO cycles to we count a sensed wall as valid
-
-#define WALL_K 500; // how stiff our virtual walls appear
+#define WALL_K 1; // how stiff our virtual walls appear
 
 FalconDevice g_falconDevice;
 
@@ -176,18 +189,6 @@ bool init_falcon(int NoFalcon)
 // Networked connection (read anything coming from ROS is going to be very jerky
 // Better for some external node to just tell us where walls are or something
 
-void forceCallback(const aqbar::falconForcesConstPtr& msg)
-{
-  std::array<double,3> forces;
-  forces[0] = msg->X;
-  forces[1] = msg->Y;
-  forces[2] = msg->Z;
-  g_falconDevice.setForce(forces);
-  
-  cout << "set Force" << forces[0] << ", " << forces[1] << ", " << forces[2] << endl;
-  //TODO Add safety to only apply forces for limited time
-}
-
 
 
 // Assuming here that that we get sensors in the form
@@ -200,6 +201,7 @@ void ContactensorCallback(const std_msgs::Byte& msg)
   l_sensor = msg.data & 0b0100000;
   t_sensor = msg.data & 0b0010000;
   b_sensor = msg.data & 0b0001000;
+  
 
   if(r_sensor) {
 	g_right_wall_pos = g_pos[1];
@@ -231,12 +233,15 @@ int main(int argc, char* argv[])
 
   ros::init(argc,argv, "ROSfalcon");
 
-  int baud = 9600;
-  //std::string port = "/dev/ttyUSB0";
-  std::string port = "/dev/ttyACM0";
+  int baud = 115200;
+  std::string port = "/dev/ttyUSB0";
+  // std::string port = "/dev/ttyACM0";
 	
   // port, baudrate, timeout in milliseconds
-  serial::Serial arduino(port, baud, serial::Timeout::simpleTimeout(1000));
+  serial::Serial arduino(port, baud, serial::Timeout::simpleTimeout(100));
+  sleep(2);
+  string result = arduino.read(512);
+  std::cout << "found arduino, it said: " << result  << std::endl;
   
   //TODO Driver currently assumes there is only one falcon attached 
   if(init_falcon(0))
@@ -245,72 +250,142 @@ int main(int argc, char* argv[])
 	  
 	  g_falconDevice.setFalconKinematic<libnifalcon::FalconKinematicStamper>();
 	  ros::NodeHandle node;
-      
-	  ros::Rate loop_rate(.5);
+	  
+	  ros::Rate loop_rate(30000); //HZ
+	  int arduino_max_count = 0;
+	  int arduino_count = 0;
+	   
 	  
 	  std::array<double,3> forces;
-			
+
+	  
 	  while(node.ok())
 		{
 		  if(g_falconDevice.runIOLoop())
 			{
 			  //////////////////////////////////////////////
 			  //Request the current encoder positions:
-						  
-						  
+			  
+			  
 			  //cout << "spinning in IO loop" << endl; 
 			  g_pos = g_falconDevice.getPosition();
- 
-			  std::string x_cmd = std::to_string(g_pos[0]).substr(0,5);
-			  std::string y_cmd = std::to_string(g_pos[1]).substr(0,5);
-			  std::string z_cmd = std::to_string(g_pos[2]).substr(0,5);
+
+			  //std::cout << g_pos[0] << " " << g_pos[1] << " " << g_pos[2] << std::endl;
 			  
-			  std::string cmd_string = "m,"  + x_cmd +   ","  + y_cmd +  "," + x_cmd + "!";
-			  std::cout << "cmd_string" << cmd_string << std::endl;
-			  int bytes_written = arduino.write(cmd_string);
-			  std::cout << bytes_written << std::endl;
+			  // TODO should probably rewrite these... it's just a map taking the falcon workspace to the lynx workspace
+			  g_pos[0] = ((g_pos[0] - FX_MIN)/(FX_MAX - FX_MIN) * (Z_MAX - Z_MIN) + Z_MIN);
+			  g_pos[1] = ((g_pos[1] - FY_MIN)/(FY_MAX - FY_MIN) * (Y_MAX - Y_MIN) + Y_MIN);
+			  g_pos[2] = ((1 - (g_pos[2] - FZ_MIN)/(FZ_MAX - FZ_MIN)) * (X_MAX - X_MIN) + X_MIN);
+			  
+			  //std::cout << g_pos[2] << " " << g_pos[1] << " " << g_pos[0] << std::endl;
 
-
-			  string result = arduino.read(4);
-
-			  cout <<  "Bytes read: " << result.length() << ", String read: " << result << std::endl;
+			  
+			  if (arduino_count == arduino_max_count){
+				
+				std::string x_cmd = std::to_string(g_pos[2]).substr(0,5);
+				std::string y_cmd = std::to_string(g_pos[1]).substr(0,5);
+				std::string z_cmd = std::to_string(g_pos[0]).substr(0,5);
+				
+				std::string cmd_string = "m,"  + x_cmd +   ","  + y_cmd +  "," + z_cmd + "!";
+				//std::cout << "cmd_string" << cmd_string << std::endl;
+				int bytes_written = arduino.write(cmd_string);
+				std::cout << bytes_written << std::endl;
+			  
+				result = arduino.read(16);
+				cout <<  "Bytes read: " << result.length() << ", String read: " << result << std::endl;
+				//cout << "result[0] is " << result[0] << endl;
+				arduino_count = 0;
+				
+			  }
 
 			  // Render walls
 			  forces = {0,0,0}; //xyz
-						   
-						   
-			  if (g_right_wall_count) {
-				forces[0] += (g_right_wall_pos - g_pos[0])*WALL_K;
-				g_right_wall_count--; 
-			  }
-						  
-			  if (g_left_wall_count) {
-				forces[0] += (g_pos[0] - g_left_wall_pos)*WALL_K;
-				g_left_wall_count--; 
-			  }
-						  
-			  if (g_top_wall_count) {
-				forces[2] += (g_top_wall_pos - g_pos[2])*WALL_K;
-				g_top_wall_count--; 
-			  }
+			  
+			  
+			  if(result.length()){
+				//cout << "result[0] is " << result[0] << endl;
+				//TODO put this in a fcn
+				bool r_sensor = result[0] == '1' ? true : false;
+				bool l_sensor = result[1] == '1' ? true : false;
+				bool t_sensor = result[2] == '1' ? true : false;
+				bool b_sensor = result[3] == '1' ? true : false;
 
-			  if (g_bottom_wall_count) {
-				forces[2] += (g_pos[2] - g_bottom_wall_pos)*WALL_K;
-				g_bottom_wall_count--; 
-			  }
-						  
-						  
+				//cout << r_sensor << endl;
+				//	cout << t_sensor << endl;
+
+				
+				// if(r_sensor) {
+				//   cout << "uh... hello" << endl;
+				//   g_right_wall_pos = g_pos[1];
+				//   g_right_wall_count = COUNT_MAX;
+				// }
+				
+				// if(l_sensor) {
+				//   g_left_wall_pos = g_pos[1];
+				//   g_left_wall_count = COUNT_MAX;
+				// }
+				
+				if(t_sensor && g_top_wall_count == 0) {
+				  g_top_wall_pos = g_pos[2];
+				  g_top_wall_count = COUNT_MAX;
+				}
+				
+				// if(b_sensor) {
+				//   g_bottom_wall_pos = g_pos[2];
+				//   g_bottom_wall_count = COUNT_MAX;
+				// }
+
+
+				//cout << "cnt: " << g_right_wall_count << endl;
+				
+				//cout << "g_right_wall_pos" << g_right_wall_pos << "g_pos" << g_pos[0] << endl;
+				
+				// //This too
+				// if (g_right_wall_count) {
+				//   if(g_right_wall_pos < g_pos[1]){
+				// 	cout << "adding right wall force" << endl;
+				// 	forces[0] += (g_right_wall_pos - g_pos[0])*WALL_K;
+				// 	g_right_wall_count--;
+				// 	//cout << "forces[0] in right wall count  = " << forces[0] << endl;
+				//   }
+				// }
+				
+				// if (g_left_wall_count) {
+				//   //cout << "adding left wall force" << endl;
+				//   forces[0] += (g_pos[0] - g_left_wall_pos)*WALL_K;
+				//   g_left_wall_count--; 
+				// }
+
+				if (g_top_wall_count) {
+				  //cout << "wall count" <<  g_top_wall_count << " g_pos[2] " << g_pos[2] << " g_top_wall_pos " << g_top_wall_pos <<  endl;
+				  if (g_pos[2] > g_top_wall_pos){
+					//cout << "adding top wall force" << endl;
+					forces[2] -= (g_top_wall_pos - g_pos[2])*10;
+					//cout << "forces = " << forces[2] << endl;
+				  }
+				  g_top_wall_count--;
+				}
+				
+				// if (g_bottom_wall_count) {
+				//   //cout << "adding bottom wall force" << endl;
+				//   forces[2] += (g_pos[2] - g_bottom_wall_pos)*WALL_K;
+				//   g_bottom_wall_count--; 
+				// }
+				
+			  } 
+
+			  //cout << "forces:: " << forces[0] << endl;
+			  
+			  g_falconDevice.setForce(forces);
+			  
+			  //cout << "spinning" << endl;
+			  //ros::spinOnce();
+			  arduino_count++;
+			  loop_rate.sleep();
 			}
-
-
-		  g_falconDevice.setForce(forces);
-					
-		  //cout << "spinning" << endl;
-		  ros::spinOnce();
-		  loop_rate.sleep();
 		}
 	  g_falconDevice.close();
 	}
-    
+  
   return 0;
 }
