@@ -63,7 +63,7 @@ def pose_callback(msg):
     pose_cmds[1] = str((msg.Y/.2 * (Y_MAX - Y_MIN)) + Y_MIN)
     pose_cmds[2] = str((msg.Z/.2 * (Z_MAX - Z_MIN)) + Z_MIN)
 
-
+    #truncate the strings we sent out
     pose_cmds[0] = pose_cmds[0][:4]
     pose_cmds[1] = pose_cmds[0][:4]
     pose_cmds[1] = pose_cmds[0][:4]
