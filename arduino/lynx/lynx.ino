@@ -4,16 +4,17 @@
 //#include "WProgram.h"
 //#end if
 
+
+
 #include <Servo.h>
 #include <math.h>
-
 //uncomment for digital servos in the Shoulder and Elbow
 //that use a range of 900ms to 2100ms
 //#define DIGITAL_RANGE
 
 
 // comment or uncomment to turn on/off debug output
-// #define DEBUG 
+//#define DEBUG 
 
 #ifdef DEBUG
   #define DEBUG_PRINT(x) Serial.print(x)
@@ -66,14 +67,6 @@ Servo Base;
 Servo Gripper;
 Servo WristR;
 
-//Arm Current Pos
-float X = 0;
-float Y = 0;
-float Z = 0;
-int G = 90;
-float WA = 0;
-int WR = 90;
-
 //Arm temp pos
 float x = 5.5;   //5.5 - 11
 float y = 4.0;   // -2.5 - 6
@@ -85,18 +78,24 @@ float wa = 0;
 //boolean mode = true;
 
 
+int freeRam () {
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
+
 // The arduino does NOT have a floating point unit, we may need to do these calculations on the laptop and send over joint position
 int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inverse Kinematics to control the arm
 {
   float M = sqrt((y*y)+(x*x));
 
-  DEBUG_PRINT("M = "); DEBUG_PRINTLN(M);
+  //DEBUG_PRINT("M = "); DEBUG_PRINTLN(M);
   
   if(M <= 0)
     return 1;
   float A1 = atan(y/x);
   
-  DEBUG_PRINT("A1 = "); DEBUG_PRINTLN(A1);
+  //DEBUG_PRINT("A1 = "); DEBUG_PRINTLN(A1);
 
   if(x <= 0)
     return 1;
@@ -120,18 +119,11 @@ int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inv
   Elb.write(180 - Elbow);
   Shldr.write(Shoulder);
 #endif
-  Wrist.write(180 - Wris);
+  //Wrist.write(180 - Wris);
   Base.write(z);
-  WristR.write(wr);
+  //WristR.write(wr);
 #ifndef FSRG
-  Gripper.write(g);
-#endif
-  Y = y;
-  X = x;
-  Z = z;
-  WA = wa;
-#ifndef FSRG
-  G = g;
+  //Gripper.write(g);
 #endif
 
 
@@ -140,13 +132,14 @@ int Arm(float x, float y, float z, int g, float wa, int wr) //Here's all the Inv
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Base.attach(Base_pin);
   Shldr.attach(Shoulder_pin);
   Elb.attach(Elbow_pin);
   Wrist.attach(Wrist_pin);
   Gripper.attach(Gripper_pin);
   WristR.attach(WristR_pin);
+  Serial.println("Arduino connected, writing to arm");
   Arm(x, y, z, g, wa, wr);
 }
 
@@ -184,10 +177,11 @@ void loop(){
               
                z =  z < Z_MIN ? Z_MIN : z;
                z =  z > Z_MAX ? Z_MAX : z;
-               
+
                // Display position
                DEBUG_PRINT("x = "); DEBUG_PRINT(x); DEBUG_PRINT("\t y = "); DEBUG_PRINT(y); DEBUG_PRINT("\t z = "); DEBUG_PRINT(z); DEBUG_PRINT("\t g = "); DEBUG_PRINT(g); DEBUG_PRINT("\t wa = "); DEBUG_PRINT(wa); DEBUG_PRINT("\t wr = "); DEBUG_PRINTLN(wr);
-
+               //Serial.println("0000");
+               //Serial.println(freeRam());
                   
                // Move arm
                Arm(x, y, z, g, wa, wr);
@@ -196,8 +190,8 @@ void loop(){
                   //TODO shutoff commands
                   
             }else { // Bad command
-                DEBUG_PRINTLN("B2");
-                DEBUG_PRINTLN(prot[0]);
+                //DEBUG_PRINTLN("B2");
+                //DEBUG_PRINTLN(prot[0]);
             }
     
         // Reset buffer position
@@ -207,8 +201,8 @@ void loop(){
        }
 
     else {
-      DEBUG_PRINT("Buffer pos ");
-      DEBUG_PRINTLN(serialBufferPos);
+      //DEBUG_PRINT("Buffer pos ");
+      //DEBUG_PRINTLN(serialBufferPos);
       serialBufferPos++;
     }
     
