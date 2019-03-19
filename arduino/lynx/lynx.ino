@@ -10,7 +10,7 @@
 #include <math.h>
 //uncomment for digital servos in the Shoulder and Elbow
 //that use a range of 900ms to 2100ms
-//#define DIGITAL_RANGE
+#define DIGITAL_RANGE
 
 
 // comment or uncomment to turn on/off debug output
@@ -75,8 +75,25 @@ int g = 90;
 int wr = 90;
 float wa = 0;
 
-//boolean mode = true;
+#define DPIN1 3
+#define DPIN2 7
+#define DPIN3 9
+#define DPIN4 11
 
+uint8_t dpin1_mask;
+volatile uint8_t *dpin1_port;
+uint8_t dpin2_mask;
+volatile uint8_t *dpin2_port;
+
+uint8_t dpin3_mask;
+volatile uint8_t *dpin3_port;
+
+uint8_t dpin4_mask;
+volatile uint8_t *dpin4_port;
+
+uint8_t onState[4] = {0}; //this variable tracks the state of the switch, 0 if not pressed, 1 if pressed
+ 
+//boolean mode = true;
 
 int freeRam () {
   extern int __heap_start, *__brkval; 
@@ -139,6 +156,27 @@ void setup()
   Wrist.attach(Wrist_pin);
   Gripper.attach(Gripper_pin);
   WristR.attach(WristR_pin);
+  
+  pinMode(DPIN1,INPUT_PULLUP);
+  pinMode(DPIN2,INPUT_PULLUP);
+  pinMode(DPIN3,INPUT_PULLUP);
+  pinMode(DPIN4,INPUT_PULLUP);
+
+  dpin1_mask = digitalPinToBitMask(DPIN1);
+  dpin1_port = portInputRegister(digitalPinToPort(DPIN1));
+
+  dpin2_mask = digitalPinToBitMask(DPIN2);
+  dpin2_port = portInputRegister(digitalPinToPort(DPIN2));
+
+  dpin3_mask = digitalPinToBitMask(DPIN3);
+  dpin3_port = portInputRegister(digitalPinToPort(DPIN3));
+
+  dpin4_mask = digitalPinToBitMask(DPIN4);
+  dpin4_port = portInputRegister(digitalPinToPort(DPIN4));
+
+
+  
+
   Serial.println("Arduino connected, writing to arm");
   Arm(x, y, z, g, wa, wr);
 }
@@ -162,7 +200,19 @@ void loop(){
             
             // Handle specific commands
             else if ( prot[0] == 'm' ) {
-  
+
+            
+
+               onState[0] = (*dpin1_port & dpin1_mask) != 0;  
+               onState[1] = (*dpin2_port & dpin2_mask) != 0;  
+               onState[2] = (*dpin3_port & dpin3_mask) != 0;  
+               onState[3] = (*dpin4_port & dpin4_mask) != 0;  
+
+               
+               for (int i = 0; i<4; i++) Serial.print(onState[i]);
+               Serial.println();
+              
+          
                // converts our values from a string x,y,z! to a float
                x = atof(strtok(NULL, ","));
                y = atof(strtok(NULL, ","));
@@ -178,13 +228,21 @@ void loop(){
                z =  z < Z_MIN ? Z_MIN : z;
                z =  z > Z_MAX ? Z_MAX : z;
 
+               //int buttonState1 = digitalRead(DPIN1);
+               //int buttonState2 = digitalRead(DPIN2);
+               //int buttonState3 = digitalRead(DPIN3);
+               //int buttonState4 = digitalRead(DPIN4);
+
+         
                // Display position
                DEBUG_PRINT("x = "); DEBUG_PRINT(x); DEBUG_PRINT("\t y = "); DEBUG_PRINT(y); DEBUG_PRINT("\t z = "); DEBUG_PRINT(z); DEBUG_PRINT("\t g = "); DEBUG_PRINT(g); DEBUG_PRINT("\t wa = "); DEBUG_PRINT(wa); DEBUG_PRINT("\t wr = "); DEBUG_PRINTLN(wr);
-               //Serial.println("0000");
-               //Serial.println(freeRam());
-                  
+                 
                // Move arm
                Arm(x, y, z, g, wa, wr);
+
+               for(int i = 0; i < 4; i++){
+                  onState[i] = 0;
+               }
             
             }else if (prot[0] == 's'){
                   //TODO shutoff commands
