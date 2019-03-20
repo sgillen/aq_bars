@@ -1,7 +1,7 @@
 # Aq Bars
 This is a ROS package that uses a Novint Falcon to teleoperate a modified LynxMotion arm. The arm is equiped with tactile bump switches which are rendered as walls on the Falcon. There is also a simulated version of the arm available in this package. 
 
-This package is for the botborduino version of a LynxMotion ALD5 Arm. It includes arduino code with drastically improved perfomance compared to the LynxMotion example code. 
+This package is for the botboarduino version of a LynxMotion ALD5 Arm. It includes arduino code with drastically improved perfomance compared to the LynxMotion example code. 
 
 This package has been tested on Ubuntu 16.04 using ROS-kinetic
 
