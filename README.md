@@ -3,7 +3,7 @@ This is a ROS package that uses a Novint Falcon to teleoperate a modified LynxMo
 
 This package has been tested on Ubuntu 16.04 using ROS-kinetic
 
-The word Aqbar refers to a mythical creature which is half snow leopard, half falcon. 
+The word Aq Bars refers to a mythical creature which is half snow leopard, half falcon. 
 
 ## Setup and install
 
